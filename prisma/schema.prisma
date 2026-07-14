@@ -1,0 +1,35 @@
+// Prisma + PostgreSQL (Supabase)
+// url       -> conexión pooled (PgBouncer, puerto 6543) para la app en runtime
+// directUrl -> conexión directa (puerto 5432) para migraciones / prisma db push
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Module {
+  id        String   @id @default(cuid())
+  name      String
+  tasks     Task[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("modules")
+}
+
+model Task {
+  id        String   @id @default(cuid())
+  moduleId  String   @map("module_id")
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  name      String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([moduleId])
+  @@map("tasks")
+}

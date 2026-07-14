@@ -1,0 +1,29 @@
+{
+  "name": "vank-checklist-next",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Checklist colaborativo en tiempo real con Next.js, Prisma, PostgreSQL (Supabase) y Supabase Realtime",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "@supabase/supabase-js": "^2.110.3",
+    "next": "^16.2.10",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "prisma": "^6.19.3",
+    "typescript": "^5.9.3"
+  }
+}
