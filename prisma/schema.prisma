@@ -1,6 +1,5 @@
-// Prisma + PostgreSQL (Supabase)
-// url       -> conexión pooled (PgBouncer, puerto 6543) para la app en runtime
-// directUrl -> conexión directa (puerto 5432) para migraciones / prisma db push
+// Schema final: perfiles como espacio de trabajo, módulos por perfil,
+// tareas con orden manual (position) para drag & drop.
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,13 +10,27 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model Profile {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#4ade80")
+  modules   Module[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("profiles")
+}
+
 model Module {
   id        String   @id @default(cuid())
+  profileId String   @map("profile_id")
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   name      String
   tasks     Task[]
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([profileId])
   @@map("modules")
 }
 
@@ -25,10 +38,14 @@ model Task {
   id        String   @id @default(cuid())
   moduleId  String   @map("module_id")
   module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  name      String
-  done      Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  name        String
+  done        Boolean  @default(false)
+  position    Int      @default(0)
+  description String?
+  images      Json?    // hasta 2: [{ url, publicId }]
+  links       Json?    // hasta 2: [{ url, label }]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@index([moduleId])
   @@map("tasks")

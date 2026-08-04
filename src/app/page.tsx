@@ -1,5 +1,5 @@
-import ChecklistClient from "./checklist-client";
+import AppClient from "./app-client";
 
 export default function Page() {
-  return <ChecklistClient />;
+  return <AppClient />;
 }
