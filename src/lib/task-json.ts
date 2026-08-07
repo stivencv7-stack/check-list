@@ -1,4 +1,4 @@
-import type { ChecklistImage, ChecklistLink } from "@/lib/types";
+import type { ChecklistImage, ChecklistLink, ChecklistComment } from "@/lib/types";
 
 // Solo permite enlaces http/https (evita javascript:, data:, etc.).
 // Si no trae esquema, asume https://.
@@ -35,4 +35,20 @@ export function parseLinks(value: unknown): ChecklistLink[] {
     })
     .filter((l): l is ChecklistLink => l !== null)
     .slice(0, 2);
+}
+
+// Convierte el campo Json (comentarios) a un arreglo tipado y saneado (máx 100).
+export function parseComments(value: unknown): ChecklistComment[] {
+  if (!Array.isArray(value)) return [];
+  return (value as unknown[])
+    .map((x) => {
+      const o = (x ?? {}) as Record<string, unknown>;
+      const text = String(o.text ?? "").trim();
+      if (!text) return null;
+      const createdAt = typeof o.createdAt === "string" ? o.createdAt : "";
+      const kind: ChecklistComment["kind"] = o.kind === "system" ? "system" : "user";
+      return { text, createdAt, kind };
+    })
+    .filter((c): c is ChecklistComment => c !== null)
+    .slice(0, 100);
 }

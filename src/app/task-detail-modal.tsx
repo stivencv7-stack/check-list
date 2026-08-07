@@ -4,6 +4,18 @@ import { useRef, useState, type ChangeEvent } from "react";
 import type { ChecklistTask } from "@/lib/types";
 import { uploadImage } from "./cloudinary-client";
 
+function fmtComment(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("es-CO", {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 export default function TaskDetailModal({
   task,
   onClose,
@@ -17,6 +29,7 @@ export default function TaskDetailModal({
   const [uploading, setUploading] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkLabel, setLinkLabel] = useState("");
+  const [newComment, setNewComment] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const saveDescription = () => {
@@ -62,6 +75,18 @@ export default function TaskDetailModal({
 
   const removeLink = (index: number) =>
     void onPatch({ links: task.links.filter((_, i) => i !== index) });
+
+  const addComment = () => {
+    const text = newComment.trim();
+    if (!text) return;
+    setNewComment("");
+    void onPatch({
+      comments: [...task.comments, { text, createdAt: new Date().toISOString(), kind: "user" }],
+    });
+  };
+
+  const removeComment = (index: number) =>
+    void onPatch({ comments: task.comments.filter((_, i) => i !== index) });
 
   return (
     <div className="move-overlay" onClick={onClose}>
@@ -137,6 +162,53 @@ export default function TaskDetailModal({
             </div>
           )}
         </div>
+
+        {/* Comentarios */}
+        <label className="detail-label">Comentarios ({task.comments.length})</label>
+        <div className="detail-comments">
+          {task.comments.length === 0 && <div className="detail-comment-empty">Sin comentarios.</div>}
+          {task.comments.map((c, i) => (
+            <div key={i} className={`detail-comment ${c.kind === "system" ? "sys" : ""}`}>
+              <div className="detail-comment-body">
+                <span className="detail-comment-text">{c.text}</span>
+                {c.createdAt && <span className="detail-comment-date">{fmtComment(c.createdAt)}</span>}
+              </div>
+              <button className="detail-x" title="Quitar comentario" onClick={() => removeComment(i)}>
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="detail-comment-form">
+          <input
+            className="input"
+            placeholder="Escribe un comentario…"
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") addComment();
+            }}
+          />
+          <button className="btn btn-secondary small" onClick={addComment}>
+            Agregar
+          </button>
+        </div>
+
+        {task.qaComments.length > 0 && (
+          <>
+            <label className="detail-label">Comentarios de la prueba (QA) 🔵</label>
+            <div className="detail-comments">
+              {task.qaComments.map((c, i) => (
+                <div key={`qa-${i}`} className="detail-comment qa-from">
+                  <div className="detail-comment-body">
+                    <span className="detail-comment-text">{c.text}</span>
+                    {c.createdAt && <span className="detail-comment-date">{fmtComment(c.createdAt)}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         <button className="btn btn-secondary detail-close" onClick={onClose}>
           Cerrar

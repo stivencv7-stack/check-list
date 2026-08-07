@@ -105,7 +105,10 @@ h1 { margin: 0; font-size: clamp(30px, 5vw, 54px); line-height: 0.95; letter-spa
 .task:hover { border-color: rgba(74, 222, 128, 0.16); background: rgba(74, 222, 128, 0.035); }
 .task-check { width: 28px; height: 28px; border-radius: 999px; border: 1px solid rgba(74, 222, 128, 0.24); background: rgba(0, 0, 0, 0.2); color: transparent; display: grid; place-items: center; font-weight: 900; transition: all 180ms ease; }
 .task.done .task-check { color: #031003; background: var(--green); border-color: var(--green); }
+.task-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .task-name { min-width: 0; color: var(--text); outline: none; border-radius: 8px; padding: 3px 4px; word-break: break-word; }
+.task-dates { font-size: 10.5px; color: var(--muted); opacity: 0.75; line-height: 1.35; padding: 0 4px; }
+.task-dates-sep { opacity: 0.5; }
 .task-name:focus { background: rgba(74, 222, 128, 0.06); box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.12); }
 .task.done .task-name { color: rgba(242, 255, 241, 0.62); text-decoration: line-through; text-decoration-color: rgba(74, 222, 128, 0.45); }
 .icon-btn { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: transparent; color: var(--muted); transition: background 160ms ease, color 160ms ease; }
@@ -149,6 +152,7 @@ h1 { margin: 0; font-size: clamp(30px, 5vw, 54px); line-height: 0.95; letter-spa
 .board-avatar { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-weight: 900; color: #031003; font-size: 18px; }
 .board-avatar.sm { width: 24px; height: 24px; font-size: 13px; border-radius: 7px; }
 .board-topbar .connection { margin-top: 0; }
+.topbar-left { display: inline-flex; gap: 8px; flex-wrap: wrap; }
 
 /* ===== Arrastrar / mover tareas ===== */
 .task-drag { width: 24px; height: 28px; border-radius: 8px; background: transparent; color: var(--muted); cursor: grab; display: grid; place-items: center; font-size: 16px; touch-action: none; transition: color 160ms ease, background 160ms ease; }
@@ -192,3 +196,70 @@ h1 { margin: 0; font-size: clamp(30px, 5vw, 54px); line-height: 0.95; letter-spa
 .detail-link .detail-x { position: static; }
 .detail-close { margin-top: 20px; width: 100%; }
 @media (max-width: 480px) { .detail-link-form { grid-template-columns: 1fr; } }
+
+/* ===== Tipo de módulo al crear + toolbar ===== */
+.toolbar { grid-template-columns: 1fr auto auto; }
+.type-toggle { display: inline-flex; gap: 6px; align-items: stretch; }
+.type-btn { padding: 0 12px; min-height: 46px; border-radius: var(--radius-md); border: 1px solid var(--border); background: rgba(0, 0, 0, 0.3); color: var(--muted); font-weight: 800; font-size: 13px; white-space: nowrap; transition: all 160ms ease; }
+.type-btn.active.dev { border-color: rgba(74, 222, 128, 0.5); color: var(--green); background: rgba(74, 222, 128, 0.08); }
+.type-btn.active.qa { border-color: rgba(96, 165, 250, 0.55); color: #60a5fa; background: rgba(96, 165, 250, 0.1); }
+@media (max-width: 920px) { .toolbar { grid-template-columns: 1fr; } .type-toggle { justify-content: stretch; } .type-btn { flex: 1; } }
+
+/* ===== Filtros ===== */
+.filters { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; margin-bottom: 20px; }
+.filter-group { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.filter-label { color: var(--muted); font-size: 12px; font-weight: 800; }
+.filter-chip { padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid var(--border); background: rgba(0, 0, 0, 0.25); color: var(--muted); transition: all 150ms ease; }
+.filter-chip.active { border-color: var(--border-strong); background: rgba(74, 222, 128, 0.1); color: var(--text); }
+
+/* ===== Chip de estado en la tarea ===== */
+.status-wrap { position: relative; }
+.status-chip { font-size: 12px; font-weight: 800; padding: 5px 9px; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; }
+.st-pendiente { background: rgba(255, 255, 255, 0.06); color: var(--muted); border-color: rgba(255, 255, 255, 0.12); }
+.st-ejecutando { background: rgba(255, 204, 102, 0.14); color: var(--warning); border-color: rgba(255, 204, 102, 0.3); }
+.st-hecho { background: rgba(74, 222, 128, 0.16); color: var(--green); border-color: rgba(74, 222, 128, 0.3); }
+.st-fallo { background: rgba(255, 95, 95, 0.16); color: var(--danger); border-color: rgba(255, 95, 95, 0.3); }
+.st-error { background: rgba(255, 95, 95, 0.2); color: #ff8a8a; border-color: rgba(255, 95, 95, 0.4); }
+.st-aprobado { background: rgba(45, 212, 191, 0.18); color: #2dd4bf; border-color: rgba(45, 212, 191, 0.45); font-weight: 900; }
+.status-backdrop { position: fixed; inset: 0; z-index: 60; }
+.status-menu { position: fixed; z-index: 61; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 6px; box-shadow: var(--shadow); display: grid; gap: 4px; min-width: 140px; }
+.status-option { text-align: left; padding: 8px 10px; border-radius: 8px; font-size: 12px; font-weight: 800; }
+.status-option.active { outline: 1px solid rgba(255, 255, 255, 0.25); }
+
+/* Tarea con prueba fallida */
+.task.failed { border-color: rgba(255, 95, 95, 0.3); background: rgba(255, 95, 95, 0.05); }
+
+/* ===== Insignia de tipo + módulo QA en azul ===== */
+.module-type-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.01em; }
+.module-card.qa { border-color: rgba(96, 165, 250, 0.32); }
+.module-card.qa .module-header { background: linear-gradient(180deg, rgba(96, 165, 250, 0.06), transparent); border-bottom-color: rgba(96, 165, 250, 0.12); }
+.module-card.qa .module-type-badge { color: #60a5fa; }
+.module-card.qa .module-percent { color: #60a5fa; background: rgba(96, 165, 250, 0.08); border-color: rgba(96, 165, 250, 0.2); }
+.module-card.qa .progress > span { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+
+/* ===== Confirmación crear prueba QA ===== */
+.qa-confirm { width: min(420px, 100%); }
+.qa-confirm-text { color: var(--muted); margin: 0 0 20px; font-size: 15px; }
+.qa-confirm-actions { display: grid; gap: 10px; }
+.qa-confirm-cancel { justify-self: center; background: transparent; border: 0; }
+
+/* ===== Opciones de alcance del PDF ===== */
+.pdf-scope { display: grid; gap: 8px; }
+.pdf-scope-opt { text-align: left; padding: 11px 14px; border-radius: var(--radius-md); border: 1px solid var(--border); background: rgba(0, 0, 0, 0.25); color: var(--text); font-weight: 700; font-size: 14px; transition: border-color 150ms ease, background 150ms ease; }
+.pdf-scope-opt:hover { border-color: var(--border-strong); }
+.pdf-scope-opt.active { border-color: var(--border-strong); background: rgba(74, 222, 128, 0.1); }
+
+/* ===== Comentarios (en el detalle) ===== */
+.detail-comments { display: grid; gap: 8px; margin-bottom: 10px; }
+.detail-comment { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: var(--radius-md); padding: 8px 12px; }
+.detail-comment.sys { background: rgba(255, 95, 95, 0.08); border-color: rgba(255, 95, 95, 0.22); }
+.detail-comment.qa-from { background: rgba(96, 165, 250, 0.08); border-color: rgba(96, 165, 250, 0.22); }
+.detail-comment-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.detail-comment-text { color: var(--text); font-size: 14px; word-break: break-word; }
+.detail-comment-date { color: var(--muted); font-size: 11px; }
+.detail-comment-empty { color: var(--muted); font-size: 13px; padding: 2px 0; }
+.detail-comment-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+
+/* Botón "crear tarea con detalle" */
+.add-detailed { width: 100%; margin-top: 8px; color: var(--muted); }
+.add-detailed:hover { color: var(--green); }

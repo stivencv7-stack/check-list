@@ -26,6 +26,7 @@ model Module {
   profileId String   @map("profile_id")
   profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   name      String
+  type      String   @default("dev") // "dev" (Desarrollo) | "qa" (Prueba)
   tasks     Task[]
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -38,15 +39,19 @@ model Task {
   id        String   @id @default(cuid())
   moduleId  String   @map("module_id")
   module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  name        String
-  done        Boolean  @default(false)
-  position    Int      @default(0)
-  description String?
-  images      Json?    // hasta 2: [{ url, publicId }]
-  links       Json?    // hasta 2: [{ url, label }]
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  name         String
+  done         Boolean  @default(false) // (vestigial) se usa `status`
+  status       String   @default("pendiente") // pendiente | ejecutando | hecho | fallo
+  sourceTaskId String?  @map("source_task_id") // tarea de la que nació (dev->qa, qa->dev)
+  position     Int      @default(0)
+  description  String?
+  images       Json?    // hasta 2: [{ url, publicId }]
+  links        Json?    // hasta 2: [{ url, label }]
+  comments     Json?    // [{ text, createdAt, kind }]
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@index([moduleId])
+  @@index([sourceTaskId])
   @@map("tasks")
 }
