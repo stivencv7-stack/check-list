@@ -23,5 +23,6 @@ export type ChecklistModule = {
   id: string;
   name: string;
   type: ModuleType;
+  createdAt: string;
   tasks: ChecklistTask[];
 };

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ChecklistModule } from "@/lib/types";
 import { downloadChecklistPdf } from "./pdf-report";
+import { downloadChecklistWord } from "./word-report";
 
 function sameLocalDay(iso: string, target: Date): boolean {
   const d = new Date(iso);
@@ -32,6 +33,7 @@ export default function PdfExportModal({
   onClose: () => void;
 }) {
   const [scope, setScope] = useState<Scope>("all");
+  const [format, setFormat] = useState<"pdf" | "word">("pdf");
   const [dateStr, setDateStr] = useState(todayInputValue());
 
   const download = async () => {
@@ -57,18 +59,30 @@ export default function PdfExportModal({
       return;
     }
     try {
-      await downloadChecklistPdf(profileName, filtered, subtitle);
+      if (format === "word") await downloadChecklistWord(profileName, filtered, subtitle);
+      else await downloadChecklistPdf(profileName, filtered, subtitle);
       onClose();
     } catch (e) {
-      alert("No se pudo generar el PDF: " + (e instanceof Error ? e.message : String(e)));
+      alert("No se pudo generar el archivo: " + (e instanceof Error ? e.message : String(e)));
     }
   };
 
   return (
     <div className="move-overlay" onClick={onClose}>
       <div className="move-modal qa-confirm" onClick={(e) => e.stopPropagation()}>
-        <h3 className="move-title">Descargar PDF — {profileName}</h3>
-        <p className="qa-confirm-text">¿Qué quieres incluir?</p>
+        <h3 className="move-title">Descargar — {profileName}</h3>
+        <p className="qa-confirm-text">Formato</p>
+        <div className="pdf-format">
+          <button className={`pdf-fmt ${format === "pdf" ? "active" : ""}`} onClick={() => setFormat("pdf")}>
+            📄 PDF
+          </button>
+          <button className={`pdf-fmt ${format === "word" ? "active" : ""}`} onClick={() => setFormat("word")}>
+            📝 Word
+          </button>
+        </div>
+        <p className="qa-confirm-text" style={{ marginTop: 14 }}>
+          ¿Qué incluir?
+        </p>
         <div className="pdf-scope">
           <button className={`pdf-scope-opt ${scope === "all" ? "active" : ""}`} onClick={() => setScope("all")}>
             📋 Todo el perfil
@@ -90,7 +104,7 @@ export default function PdfExportModal({
         </div>
         <div className="qa-confirm-actions" style={{ marginTop: 16 }}>
           <button className="btn btn-primary" onClick={download}>
-            ⬇ Descargar PDF
+            ⬇ Descargar {format === "word" ? "Word" : "PDF"}
           </button>
           <button className="btn btn-secondary" onClick={onClose}>
             Cancelar

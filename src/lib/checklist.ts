@@ -118,6 +118,7 @@ export async function getChecklist(profileId: string): Promise<ChecklistModule[]
     id: mod.id,
     name: mod.name,
     type: (mod.type === "qa" ? "qa" : "dev") as ModuleType,
+    createdAt: mod.createdAt.toISOString(),
     tasks: mod.tasks.map((task) => ({
       id: task.id,
       name: task.name,

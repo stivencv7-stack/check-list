@@ -280,19 +280,21 @@ function ModuleCard({
           <span style={{ width: `${percent}%` }} />
         </div>
 
-        {visibleTasks.length === 0 ? (
-          <div className="empty">
-            {mod.tasks.length === 0 ? "Este módulo aún no tiene tareas." : "Ninguna tarea con ese estado."}
-          </div>
-        ) : canReorder ? (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-            <SortableContext items={visibleTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="task-list">{taskItems}</div>
-            </SortableContext>
-          </DndContext>
-        ) : (
-          <div className="task-list">{taskItems}</div>
-        )}
+        <div className="module-scroll">
+          {visibleTasks.length === 0 ? (
+            <div className="empty">
+              {mod.tasks.length === 0 ? "Este módulo aún no tiene tareas." : "Ninguna tarea con ese estado."}
+            </div>
+          ) : canReorder ? (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+              <SortableContext items={visibleTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                <div className="task-list">{taskItems}</div>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <div className="task-list">{taskItems}</div>
+          )}
+        </div>
 
         <div className="add-task">
           <input
@@ -334,6 +336,131 @@ function ModuleCard({
   );
 }
 
+type ModuleGroup = { dev?: ChecklistModule; qa?: ChecklistModule };
+
+function groupKey(g: ModuleGroup): string {
+  return g.dev && g.qa ? `${g.dev.id}-${g.qa.id}` : (g.dev ?? g.qa)!.id;
+}
+
+function dateLabel(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const yst = new Date();
+  yst.setDate(now.getDate() - 1);
+  const same = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  if (same(d, now)) return "Hoy";
+  if (same(d, yst)) return "Ayer";
+  return d.toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// Un módulo (par Dev+QA o suelto) está "terminado" si tiene tareas y todas están
+// completas: Dev en Hecho/Aprobado y, si tiene QA, todas las pruebas en Hecho.
+function isGroupDone(g: ModuleGroup): boolean {
+  const dev = g.dev?.tasks ?? [];
+  const qa = g.qa?.tasks ?? [];
+  if (dev.length + qa.length === 0) return false;
+  const devOk = dev.every((t) => t.status === "hecho" || t.status === "aprobado");
+  const qaOk = qa.every((t) => t.status === "hecho");
+  return devOk && qaOk;
+}
+
+// --- Fila compacta (acordeón) para la vista Lista ---------------------------
+function ModuleRow({
+  group,
+  open,
+  onToggle,
+  handlers,
+  statusFilter,
+}: {
+  group: ModuleGroup;
+  open: boolean;
+  onToggle: () => void;
+  handlers: Handlers;
+  statusFilter: TaskStatus | "all";
+}) {
+  const primary = (group.dev ?? group.qa)!;
+  const { percent, total } = getModuleProgress(primary);
+  const meta = MODULE_TYPE_META[primary.type];
+  const hasPair = Boolean(group.dev && group.qa);
+  const allTasks = [...(group.dev?.tasks ?? []), ...(group.qa?.tasks ?? [])];
+  const lastActivity = allTasks.length
+    ? allTasks.reduce((max, t) => (t.updatedAt > max ? t.updatedAt : max), allTasks[0].updatedAt)
+    : primary.createdAt;
+
+  return (
+    <div className={`mrow-wrap ${open ? "open" : ""}`}>
+      <button className="mrow" onClick={onToggle}>
+        <span className="mrow-chev">{open ? "▾" : "▸"}</span>
+        <span className={`mrow-badge ${primary.type}`}>{meta.emoji}</span>
+        <span className="mrow-main">
+          <span className="mrow-name-line">
+            <span className="mrow-name">{primary.name}</span>
+            {hasPair && <span className="mrow-pair">Dev + QA</span>}
+          </span>
+          <span className="mrow-date" title="Última actividad">
+            🕘 trabajado {dateLabel(lastActivity)}
+          </span>
+        </span>
+        <span className="mrow-bar">
+          <span style={{ width: `${percent}%` }} />
+        </span>
+        <span className="mrow-pct">{percent}%</span>
+        <span className="mrow-count">
+          {total} {primary.type === "qa" ? "pruebas" : "tareas"}
+        </span>
+      </button>
+      {open && (
+        <div className="mrow-body">
+          {group.dev && group.qa ? (
+            <FlipModuleCard dev={group.dev} qa={group.qa} handlers={handlers} statusFilter={statusFilter} />
+          ) : (
+            <ModuleCard module={primary} handlers={handlers} statusFilter={statusFilter} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Tarjeta con volteo Dev <-> QA (mismo nombre) ---------------------------
+function FlipModuleCard({
+  dev,
+  qa,
+  handlers,
+  statusFilter,
+}: {
+  dev: ChecklistModule;
+  qa: ChecklistModule;
+  handlers: Handlers;
+  statusFilter: TaskStatus | "all";
+}) {
+  const [side, setSide] = useState<"dev" | "qa">("dev");
+  const [flipped, setFlipped] = useState(false);
+  const active = side === "dev" ? dev : qa;
+  const otherSide: "dev" | "qa" = side === "dev" ? "qa" : "dev";
+
+  const flip = () => {
+    setFlipped(true);
+    setSide(otherSide);
+  };
+
+  return (
+    <div className="flip-card">
+      <button
+        className={`flip-tab ${otherSide}`}
+        onClick={flip}
+        title={otherSide === "qa" ? "Ver las pruebas de QA" : "Ver desarrollo"}
+      >
+        {otherSide === "qa" ? "🔵 QA" : "🟢 Desarrollo"}
+      </button>
+      <div key={side} className={`flip-inner ${flipped ? "flip-anim" : ""}`}>
+        <ModuleCard module={active} handlers={handlers} statusFilter={statusFilter} />
+      </div>
+    </div>
+  );
+}
+
 // --- Tablero del perfil ----------------------------------------------------
 export default function Board({
   profile,
@@ -361,6 +488,8 @@ export default function Board({
   const [pdfOpen, setPdfOpen] = useState(false);
   const [filterType, setFilterType] = useState<ModuleType | "all">("all");
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all");
+  const [view, setView] = useState<"grid" | "list" | "kanban">("kanban");
+  const [openModuleKey, setOpenModuleKey] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -551,6 +680,76 @@ export default function Board({
     .filter((m) => filterType === "all" || m.type === filterType)
     .filter((m) => filterStatus === "all" || m.tasks.some((t) => t.status === filterStatus));
 
+  // Empareja un módulo de Desarrollo con su QA del mismo nombre en una sola tarjeta.
+  const groups: { dev?: ChecklistModule; qa?: ChecklistModule }[] = [];
+  for (const m of visibleModules) {
+    const g = groups.find((x) => {
+      const gname = x.dev?.name ?? x.qa?.name;
+      const slotFree = m.type === "qa" ? !x.qa : !x.dev;
+      return gname === m.name && slotFree;
+    });
+    if (g) {
+      if (m.type === "qa") g.qa = m;
+      else g.dev = m;
+    } else {
+      groups.push(m.type === "qa" ? { qa: m } : { dev: m });
+    }
+  }
+
+  // Para la vista Lista: agrupa por fecha de creación (Hoy, Ayer, fecha…).
+  const dateBuckets: { key: string; label: string; sort: number; groups: ModuleGroup[] }[] = [];
+  for (const g of groups) {
+    const iso = g.dev?.createdAt ?? g.qa?.createdAt ?? "";
+    const d = new Date(iso);
+    const dayStart = Number.isNaN(d.getTime())
+      ? 0
+      : new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    let b = dateBuckets.find((x) => x.sort === dayStart);
+    if (!b) {
+      b = { key: String(dayStart), label: iso ? dateLabel(iso) : "Sin fecha", sort: dayStart, groups: [] };
+      dateBuckets.push(b);
+    }
+    b.groups.push(g);
+  }
+  dateBuckets.sort((a, b) => b.sort - a.sort);
+
+  // Reutilizable: dibuja un grupo (par Dev+QA con volteo, o módulo suelto).
+  const renderGroup = (g: ModuleGroup) =>
+    g.dev && g.qa ? (
+      <FlipModuleCard
+        key={`${g.dev.id}-${g.qa.id}`}
+        dev={g.dev}
+        qa={g.qa}
+        handlers={handlers}
+        statusFilter={filterStatus}
+      />
+    ) : (
+      <div className="flip-card" key={(g.dev ?? g.qa)!.id}>
+        <div className="flip-inner">
+          <ModuleCard module={(g.dev ?? g.qa)!} handlers={handlers} statusFilter={filterStatus} />
+        </div>
+      </div>
+    );
+
+  // Fila compacta (carpeta) que se abre al hacer clic — acordeón, uno a la vez.
+  const renderRow = (g: ModuleGroup) => {
+    const key = groupKey(g);
+    return (
+      <ModuleRow
+        key={key}
+        group={g}
+        open={openModuleKey === key}
+        onToggle={() => setOpenModuleKey(openModuleKey === key ? null : key)}
+        handlers={handlers}
+        statusFilter={filterStatus}
+      />
+    );
+  };
+
+  // Para la vista Columnas (Kanban).
+  const doneGroups = groups.filter(isGroupDone);
+  const pendingGroups = groups.filter((g) => !isGroupDone(g));
+
   return (
     <main className="app">
       <div className="board-topbar">
@@ -667,21 +866,67 @@ export default function Board({
             </button>
           ))}
         </div>
+        <div className="view-toggle">
+          <button className={`view-btn ${view === "grid" ? "active" : ""}`} onClick={() => setView("grid")}>
+            ▦ Rejilla
+          </button>
+          <button className={`view-btn ${view === "kanban" ? "active" : ""}`} onClick={() => setView("kanban")}>
+            ▚ Columnas
+          </button>
+          <button className={`view-btn ${view === "list" ? "active" : ""}`} onClick={() => setView("list")}>
+            ☰ Lista
+          </button>
+        </div>
       </section>
 
-      <section className="modules">
-        {visibleModules.length === 0 ? (
-          <div className="empty" style={{ gridColumn: "1 / -1" }}>
-            {modules.length === 0
-              ? "Este perfil no tiene módulos todavía. Crea el primero arriba."
-              : "Ningún módulo coincide con el filtro."}
+      {visibleModules.length === 0 ? (
+        <div className="empty">
+          {modules.length === 0
+            ? "Este perfil no tiene módulos todavía. Crea el primero arriba."
+            : "Ningún módulo coincide con el filtro."}
+        </div>
+      ) : view === "grid" ? (
+        <section className="modules">{groups.map(renderGroup)}</section>
+      ) : view === "kanban" ? (
+        <section className="kanban">
+          <div className="kan-col">
+            <div className="kan-col-header pending">
+              🔧 En progreso <span className="kan-count">{pendingGroups.length}</span>
+            </div>
+            <div className="kan-col-body">
+              {pendingGroups.length ? (
+                pendingGroups.map(renderRow)
+              ) : (
+                <div className="kan-empty">Nada en progreso 🎉</div>
+              )}
+            </div>
           </div>
-        ) : (
-          visibleModules.map((mod) => (
-            <ModuleCard key={mod.id} module={mod} handlers={handlers} statusFilter={filterStatus} />
-          ))
-        )}
-      </section>
+          <div className="kan-col">
+            <div className="kan-col-header done">
+              ✅ Terminados <span className="kan-count">{doneGroups.length}</span>
+            </div>
+            <div className="kan-col-body">
+              {doneGroups.length ? (
+                doneGroups.map(renderRow)
+              ) : (
+                <div className="kan-empty">Aún nada terminado</div>
+              )}
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="module-list">
+          {dateBuckets.map((b) => (
+            <div key={b.key} className="date-group">
+              <div className="date-group-header">
+                <span>📅 {b.label}</span>
+                <span className="date-count">{b.groups.length}</span>
+              </div>
+              {b.groups.map(renderRow)}
+            </div>
+          ))}
+        </section>
+      )}
 
       {moving && (
         <div className="move-overlay" onClick={() => setMoving(null)}>
